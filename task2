@@ -1,0 +1,176 @@
+#include <QApplication>
+#include <QWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QMessageBox>
+#include <QListWidget>
+#include <vector>
+#include <string>
+
+class Contact {
+public:
+    std::string name;
+    std::string phone;
+    std::string email;
+    std::string address;
+
+    Contact(std::string n, std::string p, std::string e, std::string a)
+        : name(n), phone(p), email(e), address(a) {}
+};
+
+class ContactManager : public QWidget {
+    Q_OBJECT
+
+public:
+    ContactManager() {
+        QVBoxLayout* mainLayout = new QVBoxLayout(this);
+
+        // Form layout
+        QHBoxLayout* formLayout = new QHBoxLayout();
+        QVBoxLayout* labelsLayout = new QVBoxLayout();
+        QVBoxLayout* inputsLayout = new QVBoxLayout();
+
+        QLabel* nameLabel = new QLabel("Name:");
+        nameEdit = new QLineEdit();
+        labelsLayout->addWidget(nameLabel);
+        inputsLayout->addWidget(nameEdit);
+
+        QLabel* phoneLabel = new QLabel("Phone:");
+        phoneEdit = new QLineEdit();
+        labelsLayout->addWidget(phoneLabel);
+        inputsLayout->addWidget(phoneEdit);
+
+        QLabel* emailLabel = new QLabel("Email:");
+        emailEdit = new QLineEdit();
+        labelsLayout->addWidget(emailLabel);
+        inputsLayout->addWidget(emailEdit);
+
+        QLabel* addressLabel = new QLabel("Address:");
+        addressEdit = new QLineEdit();
+        labelsLayout->addWidget(addressLabel);
+        inputsLayout->addWidget(addressEdit);
+
+        formLayout->addLayout(labelsLayout);
+        formLayout->addLayout(inputsLayout);
+        mainLayout->addLayout(formLayout);
+
+        // Buttons
+        QPushButton* addButton = new QPushButton("Add Contact");
+        QPushButton* viewButton = new QPushButton("View Contacts");
+        QPushButton* searchButton = new QPushButton("Search Contact");
+        QPushButton* updateButton = new QPushButton("Update Contact");
+        QPushButton* deleteButton = new QPushButton("Delete Contact");
+
+        mainLayout->addWidget(addButton);
+        mainLayout->addWidget(viewButton);
+        mainLayout->addWidget(searchButton);
+        mainLayout->addWidget(updateButton);
+        mainLayout->addWidget(deleteButton);
+
+        // List widget for displaying contacts
+        contactsListWidget = new QListWidget(this);
+        mainLayout->addWidget(contactsListWidget);
+
+        // Connect buttons to their respective slots
+        connect(addButton, &QPushButton::clicked, this, &ContactManager::addContact);
+        connect(viewButton, &QPushButton::clicked, this, &ContactManager::viewContacts);
+        connect(searchButton, &QPushButton::clicked, this, &ContactManager::searchContact);
+        connect(updateButton, &QPushButton::clicked, this, &ContactManager::updateContact);
+        connect(deleteButton, &QPushButton::clicked, this, &ContactManager::deleteContact);
+    }
+
+private slots:
+    void addContact() {
+        std::string name = nameEdit->text().toStdString();
+        std::string phone = phoneEdit->text().toStdString();
+        std::string email = emailEdit->text().toStdString();
+        std::string address = addressEdit->text().toStdString();
+
+        if (!name.empty() && !phone.empty() && !email.empty() && !address.empty()) {
+            contacts.emplace_back(name, phone, email, address);
+            clearEntries();
+            refreshContactsListWidget();
+            QMessageBox::information(this, "Success", "Contact added successfully.");
+        } else {
+            QMessageBox::warning(this, "Error", "All fields are required.");
+        }
+    }
+
+    void viewContacts() {
+        refreshContactsListWidget();
+    }
+
+    void searchContact() {
+        QString query = nameEdit->text();
+        contactsListWidget->clear();
+        for (const auto& contact : contacts) {
+            if (query.isEmpty() || 
+               contact.name.find(query.toStdString()) != std::string::npos ||
+               contact.phone.find(query.toStdString()) != std::string::npos) {
+                contactsListWidget->addItem(QString::fromStdString(contact.name + " - " + contact.phone));
+            }
+        }
+    }
+
+    void updateContact() {
+        QListWidgetItem* selectedItem = contactsListWidget->currentItem();
+        if (selectedItem) {
+            int index = contactsListWidget->currentRow();
+            contacts[index].name = nameEdit->text().toStdString();
+            contacts[index].phone = phoneEdit->text().toStdString();
+            contacts[index].email = emailEdit->text().toStdString();
+            contacts[index].address = addressEdit->text().toStdString();
+            clearEntries();
+            refreshContactsListWidget();
+            QMessageBox::information(this, "Success", "Contact updated successfully.");
+        } else {
+            QMessageBox::warning(this, "Error", "Please select a contact to update.");
+        }
+    }
+
+    void deleteContact() {
+        QListWidgetItem* selectedItem = contactsListWidget->currentItem();
+        if (selectedItem) {
+            int index = contactsListWidget->currentRow();
+            contacts.erase(contacts.begin() + index);
+            refreshContactsListWidget();
+            QMessageBox::information(this, "Success", "Contact deleted successfully.");
+        } else {
+            QMessageBox::warning(this, "Error", "Please select a contact to delete.");
+        }
+    }
+
+private:
+    QLineEdit* nameEdit;
+    QLineEdit* phoneEdit;
+    QLineEdit* emailEdit;
+    QLineEdit* addressEdit;
+    QListWidget* contactsListWidget;
+
+    std::vector<Contact> contacts;
+
+    void clearEntries() {
+        nameEdit->clear();
+        phoneEdit->clear();
+        emailEdit->clear();
+        addressEdit->clear();
+    }
+
+    void refreshContactsListWidget() {
+        contactsListWidget->clear();
+        for (const auto& contact : contacts) {
+            contactsListWidget->addItem(QString::fromStdString(contact.name + " - " + contact.phone));
+        }
+    }
+};
+
+int main(int argc, char* argv[]) {
+    QApplication app(argc, argv);
+    ContactManager manager;
+    manager.setWindowTitle("Contact Management System");
+    manager.show();
+    return app.exec();
+}
